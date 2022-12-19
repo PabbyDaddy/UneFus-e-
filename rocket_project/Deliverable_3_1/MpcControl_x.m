@@ -37,10 +37,10 @@ classdef MpcControl_x < MpcControlBase
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;
             
-            F = [0 1 0 0;0 -1 0 0]; 
-            f = [0.1222; 0.1222];
+            F = [0 1 0 0;0 -1 0 0]; f = [0.1222; 0.1222];
+            M = [-1;1]; m = [0.26; 0.26];        
             
-            Xf = polytope(F,f);
+            Xf = polytope([F; M*K],[f; m]);
 
             Acl = mpc.A+mpc.B*K;
             while 1
@@ -54,17 +54,25 @@ classdef MpcControl_x < MpcControlBase
             end
             [Ff,ff] = double(Xf);
             
-            figure('Name','Invarian set');
+            figure('Name','Invarian set of controller in X');
+            tiledlayout(2,2);
+            nexttile;
             Xf.projection(1:2).plot();
+            xlabel("wY"); ylabel("B");
+            nexttile;
             Xf.projection(2:3).plot();
+            xlabel("B"); ylabel("Vx");
+            nexttile;
             Xf.projection(3:4).plot();
-
+            xlabel("Vx"); ylabel("x");
+            
             con = [];
             obj = 0;
 
             for i = 1:N-1
                 con = con + (X(:,i+1) == mpc.A*X(:,i) + mpc.B*U(:,i));
                 con = con + (-0.1222 <= X(2,i) <= 0.1222);
+                con = con + (-0.26 <= U(1,i) <= 0.26);
                 if i>1
                     obj = obj + X(:,i)'*Q*X(:,i);
                 end

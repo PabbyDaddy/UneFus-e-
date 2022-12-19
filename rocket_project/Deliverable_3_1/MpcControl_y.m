@@ -33,21 +33,52 @@ classdef MpcControl_y < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([1 0 1 1]);%focus only on the y 
-            R = 0; % dont care about the angle of servo 
-            [~,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
+            Q = diag([1 1 1 1]);%maybe different coeff for different importance of each state
+            R = 0;
+            [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
+            K = -K;
+            
+            F = [0 1 0 0;0 -1 0 0]; f = [0.1222; 0.1222];
+            M = [-1;1]; m = [0.26; 0.26];        
+            
+            Xf = polytope([F; M*K],[f; m]);
 
+            Acl = mpc.A+mpc.B*K;
+            while 1
+                prevXf = Xf;
+                [T,t] = double(Xf);
+                preXf = polytope(T*Acl,t);
+                Xf = intersect(preXf, Xf);
+                if isequal(prevXf, Xf)
+                    break
+                end
+            end
+            [Ff,ff] = double(Xf);
+            
+            figure('Name','Invarian set of controller in Y');
+            tiledlayout(2,2);
+            nexttile;
+            Xf.projection(1:2).plot();
+            xlabel("wX"); ylabel("A");
+            nexttile;
+            Xf.projection(2:3).plot();
+            xlabel("A"); ylabel("Vy");
+            nexttile;
+            Xf.projection(3:4).plot();
+            xlabel("Vy"); ylabel("y");
+            
             con = [];
             obj = 0;
 
             for i = 1:N-1
                 con = con + (X(:,i+1) == mpc.A*X(:,i) + mpc.B*U(:,i));
-                con = con + (-0.1222 <= U(,i) <= 0.1222); %contraints on alpha
+                con = con + (-0.1222 <= X(2,i) <= 0.1222);
+                con = con + (-0.26 <= U(1,i) <= 0.26);
                 if i>1
                     obj = obj + X(:,i)'*Q*X(:,i);
                 end
             end
-
+            con = con + (Ff*X(:,N) <= ff); % in the invariant set
             obj = obj + X(:,N)'*Qf*X(:,N);
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE

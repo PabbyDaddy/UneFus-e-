@@ -47,23 +47,46 @@ classdef MpcControl_z < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([0 1]); %focus only on the z
-            R = 0; %can change the input in obj to minimize but we dont really care more position
-            %get as fast as possible to position
-            [~,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
+            Q = diag([1 1]);%maybe different coeff for different importance of each state
+            R = 0;
+            [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
+            K = -K;
+            
+            % u in U = { u | Mu <= m }
+            M = [-1;1]; m = [-50+56.66; 80-56.66];
+            
+            Xf = polytope(M*K,m);
+
+            Acl = mpc.A+mpc.B*K;
+            while 1
+                prevXf = Xf;
+                [T,t] = double(Xf);
+                preXf = polytope(T*Acl,t);
+                Xf = intersect(preXf, Xf);
+                if isequal(prevXf, Xf)
+                    break
+                end
+            end
+            [Ff,ff] = double(Xf);
+            
+            figure('Name','Invarian set of controller in z');
+            plot(Xf);
+            xlabel("Vz"); ylabel("z");
+            
 
             con = [];
             obj = 0;
 
             for i = 1:N-1
                 con = con + (X(:,i+1) == mpc.A*X(:,i) + mpc.B*U(:,i));
-                con = con + (0.5 <= U(:,i) <= 0.8); %contraints on alpha
+                con = con + (50-56.66 <= U(:,i) <= 80-56.66); %contraints on PAvg in %
                 if i>1
                     obj = obj + X(:,i)'*Q*X(:,i);
                 end
             end
+            obj = obj + X(:,N)'*Qf*X(:,N); 
+            con = con + (Ff*X(:,N) <= ff); % in the invariant set
 
-            obj = obj + X(:,N)'*Qf*X(:,N);
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -72,7 +95,6 @@ classdef MpcControl_z < MpcControlBase
             ctrl_opti = optimizer(con, obj, sdpsettings('solver','gurobi'), ...
                 {X(:,1), x_ref, u_ref, d_est}, {U(:,1), X, U});
         end
-        
         
         % Design a YALMIP optimizer object that takes a position reference
         % and returns a feasible steady-state state and input (xs, us)

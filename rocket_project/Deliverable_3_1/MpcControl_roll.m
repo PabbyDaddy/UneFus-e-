@@ -33,22 +33,46 @@ classdef MpcControl_roll < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([0 1]); %just the angle gamma
+            Q = diag([1 1]); %just the angle gamma
             R = 0; %dont care Pdiff 
-            [~,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
+            [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
+            K = -K;
+
+            % u in U = { u | Mu <= m }
+            M = [-1;1]; m = [20; 20];
+            
+            Xf = polytope(M*K,m);
+
+            Acl = mpc.A+mpc.B*K;
+            while 1
+                prevXf = Xf;
+                [T,t] = double(Xf);
+                preXf = polytope(T*Acl,t);
+                Xf = intersect(preXf, Xf);
+                if isequal(prevXf, Xf)
+                    break
+                end
+            end
+            [Ff,ff] = double(Xf);
+            
+            figure('Name','Invarian set of controller in Roll');
+            plot(Xf);
+            xlabel("wZ"); ylabel("Sigma");
+
 
             con = [];
             obj = 0;
 
             for i = 1:N-1
                 con = con + (X(:,i+1) == mpc.A*X(:,i) + mpc.B*U(:,i));
-                con = con + (-0.2 <= U(:,i) <= 0.2); %Pdiff +/-20% not sure...
+                con = con + (-20 <= U(1,i) <= 20); %Pdiff +/-20% not sure...
                 if i>1
                     obj = obj + X(:,i)'*Q*X(:,i);
                 end
             end
 
             obj = obj + X(:,N)'*Qf*X(:,N);
+            con = con + (Ff*X(:,N) <= ff); % in the invariant set
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

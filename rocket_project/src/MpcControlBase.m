@@ -24,6 +24,7 @@ classdef MpcControlBase
         
         % Compute the MPC controller
         function [u, T, X, U] = get_u(mpc, x, ref)
+            a=-1;
             % Compute the target ...
             if nargin >= 3
                 % ... from reference
