@@ -50,43 +50,24 @@ classdef MpcControl_z < MpcControlBase
             Q = diag([1 1]);%maybe different coeff for different importance of each state
             R = 0;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
-            K = -K;
-            
-            % u in U = { u | Mu <= m }
-            M = [-1;1]; m = [-50+56.66; 80-56.66];
-            
-            Xf = polytope(M*K,m);
-
-            Acl = mpc.A+mpc.B*K;
-            while 1
-                prevXf = Xf;
-                [T,t] = double(Xf);
-                preXf = polytope(T*Acl,t);
-                Xf = intersect(preXf, Xf);
-                if isequal(prevXf, Xf)
-                    break
-                end
-            end
-            [Ff,ff] = double(Xf);
-            
-            figure('Name','Invarian set of controller in z');
-            plot(Xf);
-            xlabel("Vz"); ylabel("z");
-            
+            K = -K;            
 
             con = [];
             obj = 0;
 
             for i = 1:N-1
-                con = con + (X(:,i+1) == mpc.A*X(:,i) + mpc.B*U(:,i));
-                con = con + (50-56.67 <= U(:,i) <= 80-56.67); %contraints on PAvg in %
+                dX = X(:,i) - x_ref;
+                dU = U(:,i) - u_ref;
+                dXp = mpc.A*dX+mpc.B*dU;
+
+                con = con + (X(:,i+1) == dXp+x_ref);
+                con = con + ((50-56.6) <= U(:,i) <= (80-56.7)); %contraints on PAvg - gravity offset
+                
                 if i>1
-                    obj = obj + X(:,i)'*Q*X(:,i);
+                    obj = obj + dX'*Q*dX;
                 end
             end
-            obj = obj + X(:,N)'*Qf*X(:,N); 
-            con = con + (Ff*X(:,N) <= ff); % in the invariant set
-
+            obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref); 
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -123,8 +104,12 @@ classdef MpcControl_z < MpcControlBase
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             % You can use the matrices mpc.A, mpc.B, mpc.C and mpc.D
-            obj = 0;
-            con = [xs == 0, us == 0];
+            
+            obj = us'*mpc.D*us;
+            con = [];
+            con = con + (xs == mpc.A*xs+ mpc.B*us);
+            con = con + (mpc.C*xs == ref);
+            con = con + (50-56.66 <= us <= 80-56.66); % condition on pacg - gravity_offset given by us
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

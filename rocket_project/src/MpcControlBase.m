@@ -40,6 +40,7 @@ classdef MpcControlBase
                 end
                 [ref_x, ref_u] = deal(target{:});
                 if solve_status ~= 0
+                    a = -1
                     solve_status_str = yalmiperror(solve_status);
                     fprintf([' [' class(mpc) ' target: ' solve_status_str(1:end-1) '] ']);
                     u = nan(struct(mpc.ctrl_opti).dimoutOrig{1}); 
