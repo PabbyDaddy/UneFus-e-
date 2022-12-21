@@ -47,16 +47,15 @@ classdef MpcControl_roll < MpcControlBase
                 dXp = mpc.A*dX+mpc.B*dU;
 
                 con = con + (X(:,i+1) == dXp+x_ref);
-                con = con + ((50-56.6) <= U(:,i) <= (80-56.7)); %contraints on PAvg - gravity offset
+                con = con + (-20 <= U(:,i) <= +20); %contraints on PAvg - gravity offset
                 
 
                 if i>1
-                    obj = obj + X(:,i)'*Q*X(:,i);
+                    obj = obj + dX'*Q*dX;
                 end
             end
 
-            obj = obj + X(:,N)'*Qf*X(:,N);
-            con = con + (Ff*X(:,N) <= ff); % in the invariant set
+            obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref);
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
