@@ -33,7 +33,11 @@ classdef MpcControl_y < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([1 1 1 1]);%maybe different coeff for different importance of each state
+
+            eX = sdpvar(1, N-1);
+            eU = sdpvar(1, N-1);
+
+            Q = diag([1 1 1 4]);%maybe different coeff for different importance of each state
             R = 0;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;
@@ -47,11 +51,12 @@ classdef MpcControl_y < MpcControlBase
                 dXp = mpc.A*dX+mpc.B*dU;
 
                 con = con + (X(:,i+1) == dXp+x_ref);
-                con = con + (-0.1222 <= X(2,i) <= 0.1222);
-                con = con + (-0.26 <= U(1,i) <= 0.26);
-                if i>1
-                    obj = obj + dX'*Q*dX;
-                end
+                con = con + (-eX(:,i) + -0.1222 <= X(2,i) <= 0.1222 + eX(:,i));
+                con = con + (-eU(:,i) + -0.26 <= U(1,i) <= 0.26 + eU(:,i));
+                con = con + (eX(:,i) >= 0);
+                con = con + (eU(:,i) >= 0);
+                
+                obj = obj + dX'*Q*dX + eX(:,i)^2*200 + eU(:,i)^2*200;
             end
 
             obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref);

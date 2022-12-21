@@ -47,7 +47,7 @@ classdef MpcControl_z < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([1 1]);%maybe different coeff for different importance of each state
+            Q = diag([1 3]); %maybe different coeff for different importance of each state
             R = 0;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;            
