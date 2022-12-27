@@ -102,22 +102,24 @@ classdef MpcControl_z < MpcControlBase
             
             % Disturbance estimate (Ignore this before Part 5)
             d_est = sdpvar;
+            eU = sdpvar;
             
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             % You can use the matrices mpc.A, mpc.B, mpc.C and mpc.D
             
-            obj = us'*mpc.D*us;
-            con = [];
-            con = con + (xs == mpc.A*xs+ mpc.B*us);
-            con = con + (mpc.C*xs == ref);
-            con = con + (50-56.66 <= us <= 80-56.66); % condition on pacg - gravity_offset given by us
+            obj = us'*us;
+            constraints = [];    
+            constraints = constraints + (3 >= eU >= 0);
+            constraints = constraints + (-eU + (50-56.6) <= us <= (80-56.7) + eU);
+            constraints = constraints + (xs == mpc.A*xs + mpc.B*us);
+            constraints = constraints + (ref == mpc.C*xs + d_est);
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             % Compute the steady-state target
-            target_opti = optimizer(con, obj, sdpsettings('solver', 'gurobi'), {ref, d_est}, {xs, us});
+            target_opti = optimizer(constraints, obj, sdpsettings('solver', 'gurobi'), {ref, d_est}, {xs, us});
         end
         
         
@@ -133,25 +135,19 @@ classdef MpcControl_z < MpcControlBase
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             % You can use the matrices mpc.A, mpc.B, mpc.C and mpc.D
             
-%             us = sdpvar(nu,1);
-%             xs = sdpvar(size(mpc.A,2),1);
-%             eU = sdpvar(1, 1);
-% 
-%             constraints = [];    
-%             constraints = constraints + (3 >= eU >= 0);
-%             constraints = constraints + (-eU + (50-56.6) <= us <= (80-56.7));
-%             constraints = constraints + (x == A*x + B*u);
-%             constraints = constraints + (r == C*x + d);
-            
             nx   = size(mpc.A,1);
             nu   = size(mpc.B,2);
             ny   = size(mpc.C,1);
 
-            A_bar = [mpc.A, zeros(nx,1);zeros(1,nx),1];
-            B_bar = [mpc.B;zeros(1,nu)];
-            C_bar = [mpc.C,ones(ny,1)];
-                
-            L = - place(A_bar',C_bar',[0.5,0.6,0.7])'; %eigen vector to define to converge < 1
+            A_bar = [mpc.A, zeros(size(mpc.A,1),1);zeros(1,size(mpc.A,2)),1];
+            A_bar(1,2) = A_bar(1,2)+1e-10;
+            B_bar = [mpc.B;zeros(1,size(mpc.B,2))];
+            C_bar = [mpc.C,ones(size(mpc.C,1),1)];
+            %  L : (A+LC)  
+            %       eig(A' + C'*L') = eig(A + L*C)
+            L = - place(A_bar',C_bar',[0.6, 0.7, 0.8])'; %eigen vector to define to converge < 1
+            %       A - B*K  ==> on recherche K qui est en fait le L 
+            %       A' - K'*B'
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

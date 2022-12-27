@@ -48,6 +48,8 @@ U_opt(:,end+1) = nan;
 ph = rocket.plotvis(T_opt, X_opt, U_opt, ref4); % Plot as usual
 ph.fig.Name = 'MPC in linear simulation'; % Set a figure title
 
+
+
 % Setup reference function
 ref = @(t_ , x ) ref_EPFL(t_);
 % Simulate
