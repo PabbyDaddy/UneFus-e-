@@ -31,6 +31,7 @@ classdef MpcControlBase
                 if length(struct(mpc.target_opti).diminOrig) == 2
                     if length(x) == 3
                         d_est = x(end);
+                        disp(d_est);
                     else
                         d_est = 0;
                     end
@@ -54,7 +55,6 @@ classdef MpcControlBase
             % Compute the control action
             if length(struct(mpc.ctrl_opti).diminOrig) == 4
                 if length(x) == 3
-                    disp("d_est")
                     d_est = x(end);
                     x = x(1:end-1);
                 else

@@ -17,7 +17,7 @@ u0 = [deg2rad([0 0]), 0, 0 ]';
 %Pdiff= [-20% +20%]
 
 Ts = 1/20; % Sample time
-Tf = 3; %simulation time
+Tf = 30; %simulation time
 
 rocket = Rocket(Ts);
 [xs, us] = rocket.trim();
@@ -35,6 +35,7 @@ mpc_y = MpcControl_y(sys_y, Ts, H);
 mpc_z = MpcControl_z(sys_z, Ts, H);
 mpc_roll = MpcControl_roll(sys_roll, Ts, H);
 
+
 mpc = rocket.merge_lin_controllers(xs, us, mpc_x, mpc_y, mpc_z, mpc_roll);
 % Evaluate once and plot optimal open−loop trajectory,
 % pad last input to get consistent size with time and state
@@ -42,18 +43,10 @@ mpc = rocket.merge_lin_controllers(xs, us, mpc_x, mpc_y, mpc_z, mpc_roll);
 %define the ref to go
 ref4 = [2 2 2 deg2rad(40)]';
 
-[u, T_opt, X_opt, U_opt] = mpc.get_u(x0, ref4);
-U_opt(:,end+1) = nan;
-
-ph = rocket.plotvis(T_opt, X_opt, U_opt, ref4); % Plot as usual
-ph.fig.Name = 'MPC in linear simulation'; % Set a figure title
-
 % Setup reference function
 ref = @(t_ , x ) ref_EPFL(t_);
-% Simulate
-Tf = 30;
-[T, X, U, Ref] = rocket.simulate(x0, Tf, @mpc.get_u, ref);
-% Visualize
+
+[T, X, U, Ref, Z_hat] = rocket.simulate_est_z(x0, Tf, @mpc.get_u, ref, mpc_z, sys_z);
 rocket.anim_rate = 2; % Increase this to make the animation faster
 ph = rocket.plotvis(T, X, U, Ref);
-ph.fig.Name = 'Merged lin. MPC in nonlinear simulation'; % Set a figure title
+ph.fig.Name = 'MPC with disturbance on Z';% Set a figure title
