@@ -79,7 +79,7 @@ classdef MpcControl_z < MpcControlBase
 
             for i = 1:N-1
                 con = con + (X(:,i+1) == mpc.A*X(:,i) + mpc.B*U(:,i));
-                con = con + (50-56.67 <= U(:,i) <= 80-56.67); %contraints on PAvg in %
+                con = con + (50-56.65 <= U(:,i) <= 80-56.67); %contraints on PAvg in %
                 if i>1
                     obj = obj + X(:,i)'*Q*X(:,i);
                 end

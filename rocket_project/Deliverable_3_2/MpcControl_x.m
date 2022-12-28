@@ -94,7 +94,7 @@ classdef MpcControl_x < MpcControlBase
             % You can use the matrices mpc.A, mpc.B, mpc.C and mpc.D
             
             
-            obj = us'*mpc.D*us;
+            obj = us'*us;
             con = [];
             con = con + (xs == mpc.A*xs+ mpc.B*us);
             con = con + (mpc.C*xs == ref);
