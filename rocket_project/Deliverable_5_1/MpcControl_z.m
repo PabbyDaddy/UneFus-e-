@@ -50,7 +50,7 @@ classdef MpcControl_z < MpcControlBase
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
 
-            Q = diag([1 6]);%maybe different coeff for different importance of each state
+            Q = diag([2 4]);%maybe different coeff for different importance of each state
             R = 0;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;            

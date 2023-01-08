@@ -47,10 +47,10 @@ classdef MpcControl_z < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([1 3]); %maybe different coeff for different importance of each state
-            R = 0;
+            Q = diag([1 1600*4]); %maybe different coeff for different importance of each state
+            R = 1;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
-            K = -K;            
+            K = -K;   
 
             con = [];
             obj = 0;
@@ -64,9 +64,11 @@ classdef MpcControl_z < MpcControlBase
                 con = con + ((50-56.6) <= U(:,i) <= (80-56.7)); %contraints on PAvg - gravity offset
                 
                 if i>1
-                    obj = obj + dX'*Q*dX;
+                    obj = obj + dX'*Q*dX + dU'*R*dU;
                 end
             end
+            Qf(1,1) = Qf(2,2)*10;
+
             obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref); 
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE

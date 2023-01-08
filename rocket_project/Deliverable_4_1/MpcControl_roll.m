@@ -21,6 +21,7 @@ classdef MpcControl_roll < MpcControlBase
             % Steady-state targets (Ignore this before Todo 3.2)
             x_ref = sdpvar(nx, 1);
             u_ref = sdpvar(nu, 1);
+            eX = sdpvar(1, N-1);
             
             % Predicted state and input trajectories
             X = sdpvar(nx, N);
@@ -33,7 +34,7 @@ classdef MpcControl_roll < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([1 1]); %just the angle gamma
+            Q = diag([4 10]); %just the angle gamma
             R = 0; %dont care Pdiff 
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;
@@ -51,7 +52,7 @@ classdef MpcControl_roll < MpcControlBase
                 
 
                 if i>1
-                    obj = obj + dX'*Q*dX;
+                    obj = obj + dX'*Q*dX*5;
                 end
             end
 

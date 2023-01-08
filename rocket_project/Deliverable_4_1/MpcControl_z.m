@@ -50,14 +50,15 @@ classdef MpcControl_z < MpcControlBase
             
             eU = sdpvar(1, N-1);
 
-            Q = diag([1 4]);%maybe different coeff for different importance of each state
-            R = 0;
+            Q = diag([3 11]);%maybe different coeff for different importance of each state
+            R = 1;
+
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;            
 
             con = [];
             obj = 0;
-
+            
             for i = 1:N-1
                 dX = X(:,i) - x_ref;
                 dU = U(:,i) - u_ref;
@@ -65,11 +66,11 @@ classdef MpcControl_z < MpcControlBase
 
                 con = con + (X(:,i+1) == dXp+x_ref);
                 con = con + (-eU(:,i) + (50-56.6) <= U(:,i) <= (80-56.7) + eU(:,i)); %contraints on PAvg - gravity offset
-                con = con + (3 >= eU(:,i) >= 0);
-
-                obj = obj + dX'*Q*dX + eU(:,i)^2*200;
+                con = con + (1 >= eU(:,i) >= 0);
+                
+                obj = obj + (dX'*Q*dX)*1 + eU(:,i)^2*20000;
             end
-            obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref); 
+            obj = obj + ((X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref)); 
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -107,7 +108,7 @@ classdef MpcControl_z < MpcControlBase
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             % You can use the matrices mpc.A, mpc.B, mpc.C and mpc.D
             
-            obj = us'*us;
+            obj = us'*us; %put P_avg to 0
             con = [];
             con = con + (xs == mpc.A*xs+ mpc.B*us);
             con = con + (mpc.C*xs == ref);
