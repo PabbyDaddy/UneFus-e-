@@ -50,8 +50,8 @@ classdef MpcControl_z < MpcControlBase
             
             eU = sdpvar(1, N-1);
 
-            Q = diag([3 11]);%maybe different coeff for different importance of each state
-            R = 1;
+            Q = diag([10 70]);%maybe different coeff for different importance of each state
+            R = 0.001;
 
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;            
@@ -66,9 +66,9 @@ classdef MpcControl_z < MpcControlBase
 
                 con = con + (X(:,i+1) == dXp+x_ref);
                 con = con + (-eU(:,i) + (50-56.6) <= U(:,i) <= (80-56.7) + eU(:,i)); %contraints on PAvg - gravity offset
-                con = con + (1 >= eU(:,i) >= 0);
+                con = con + (eU(:,i) >= 0);
                 
-                obj = obj + (dX'*Q*dX)*1 + eU(:,i)^2*20000;
+                obj = obj + (dX'*Q*dX) + eU(:,i)*20000;
             end
             obj = obj + ((X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref)); 
             

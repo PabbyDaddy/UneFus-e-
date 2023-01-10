@@ -37,7 +37,7 @@ classdef MpcControl_y < MpcControlBase
             eX = sdpvar(1, N-1);
             eU = sdpvar(1, N-1);
 
-            Q = diag([2 1 2 10]);%maybe different coeff for different importance of each state
+            Q = diag([20 1 2 45]);%maybe different coeff for different importance of each state
             R = 0;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;
@@ -53,8 +53,8 @@ classdef MpcControl_y < MpcControlBase
                 con = con + (X(:,i+1) == dXp+x_ref);
                 con = con + (-eX(:,i) + -0.1222 <= X(2,i) <= 0.1222 + eX(:,i));
                 con = con + (-eU(:,i) + -0.26 <= U(1,i) <= 0.26 + eU(:,i));
-                con = con + (1*0.0175>= eX(:,i) >= 0);
-                con = con + (1*0.0175>= eU(:,i) >= 0);
+                con = con + (eX(:,i) >= 0);
+                con = con + (eU(:,i) >= 0);
                 
                 obj = obj + dX'*Q*dX*0.5 + eX(:,i)^2*20000 + eU(:,i)^2*20000 + dU'*R*dU;
             end
