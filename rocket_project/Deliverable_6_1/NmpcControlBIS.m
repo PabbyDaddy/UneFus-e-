@@ -77,13 +77,14 @@ classdef NmpcControlBIS < handle
                     
             % Equality constraints (Casadi SX), each entry == 0
             next_state = RK4(X_sym(:,1), U_sym(:,1), rocket.Ts, f_symbolic);
-            eq_constr = [ (X_sym(:,2)) ==  next_state ; ];
+            eq_constr = [ (X_sym(:,2)) - next_state ; ];
+
             for k=2:N-1 % loop over control intervals
             %opti.subject_to(X_sym(:,k+1) == f_discrete(X_sym(:,k), U_sym(:,k)));
             next_state = RK4(X_sym(:,k), U_sym(:,k), rocket.Ts, f_symbolic);
             %opti.subject_to((X_sym(:,k+1)) ==  next_state);
 
-            eq_constr = [eq_constr (X_sym(:,k+1)) ==  next_state; ];
+            eq_constr = [eq_constr ((X_sym(:,k+1)) -  next_state); ];
 
             %   
             end
@@ -91,6 +92,30 @@ classdef NmpcControlBIS < handle
             % Inequality constraints (Casadi SX), each entry <= 0
 
             % inequality constraints of the type: Gz < g
+            % with G = [F zeros; zeros M) and g = [f;m]
+
+%             % F*x <= f constrain on states variables 
+%             F = [0 0 0 1 0 0 0 0 0 0 0 0;... %alpha
+%                 0 0 0 -1 0 0 0 0 0 0 0 0;...
+%                 0 0 0 0 1 0 0 0 0 0 0 0;...   %beta
+%                 0 0 0 0 -1 0 0 0 0 0 0 0];
+%                         
+%             f = [deg2rad(85);deg2rad(85);deg2rad(85);deg2rad(85)];
+%            
+%             % M*u <= m constrians on inpute variables
+%             M = [1 0 0 0;... % delta 1
+%                  -1 0 0 0;...
+%                  0 1 0 0;... % delat 2
+%                  0 -1 0 0;...
+%                  0 0 1 0;... % Pavg
+%                  0 0 -1 0;...
+%                  0 0 0 1;... % Pdiff
+%                  0 0 0 -1];
+%             m = [0.26;0.26;0.26;0.26;80;-50;20;20]; % do we need to do - something for Pavg
+
+           %%
+
+           % inequality constraints of the type: Gz < g
             % with G = [F zeros; zeros M) and g = [f;m]
 
             % F*x <= f constrain on states variables 
@@ -112,7 +137,16 @@ classdef NmpcControlBIS < handle
                  0 0 0 -1];
             m = [0.26;0.26;0.26;0.26;80;-50;20;20]; % do we need to do - something for Pavg
             
-            %ineq_constr = [F*X_sym <= f; M*U_sym <= m];
+            DIA_left = zeros(size(M,1), size(F, 2));
+            DIA_right = zeros(size(F, 1), size(M, 2));
+            
+            G = [F DIA_right; DIA_left M];
+            g = [f; m];
+            Z = [X_sym(:,1:(end-1)); U_sym];
+            ineq_constr = [G*Z-g; ];
+
+            
+            %ineq_constr = [F*X_sym - f; M*U_sym - m];
             %ineq_constr = [F*X_sym; f];
 
             % For box constraints on state and input, overwrite entries of

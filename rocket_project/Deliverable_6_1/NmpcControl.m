@@ -36,15 +36,23 @@ classdef NmpcControl < handle
             ref_sym = SX.sym('ref_sym', 4, 1);  % target position
             
             % Default state and input constraints
-            ubx = inf(nx, 1);
-            lbx = -inf(nx, 1);
-            ubu = inf(nu, 1);
-            lbu = -inf(nu, 1);
+            ubx = inf(nx, 1); %Upper bound x
+            lbx = -inf(nx, 1); %Lower bound x
+            ubu = inf(nu, 1); %Upper bound u
+            lbu = -inf(nu, 1); %Lower bound u
             
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             
+            opti = casadi.Opti(); % Optimization problem
+            
+            offset = 55; %56.667;
+            
             % Cost
+            %cost = 0;
+
+            % Variables
+
             %% Code section used to compute the terminal cost Qf using dlqr funtion 
             [xs, us] = rocket.trim(); 
             sys = rocket.linearize(xs, us);
@@ -53,74 +61,70 @@ classdef NmpcControl < handle
             R = diag([10 10 20 10]); 
             target = [0 0 0 0 0 ref_sym(4) 0 0 0 ref_sym(1) ref_sym(2) ref_sym(3)]';
             [~,Qf,~] = dlqr(sys_d.A,sys_d.B,Q,R);
-            %%
-            f_symbolic = @(x,u) rocket.f(x, u);
-     
-            %% Compute the cost of each component with their respective weights
-            cost = 0.1*sum(X_sym(1,:).^2)  + ... 
-               0.1*sum(X_sym(2,:).^2)  + ... 
-               0.1*sum(X_sym(3,:).^2)  + ... 
-               0.1*sum(X_sym(4,:).^2)  + ... 
-               0.1*sum(X_sym(5,:).^2)  + ... 
-               200*( sum( (X_sym(6,:)-ref_sym(4)).^2 ))  + ... 
-               0.1*sum(X_sym(7,:).^2)  + ... 
-               0.1*sum(X_sym(8,:).^2)  + ... 
-               0.1*sum(X_sym(9,:).^2)  + ... 
-               200*( sum( (X_sym(10,:)-ref_sym(1)).^2 ))  + ... 
-               200*( sum( (X_sym(11,:)-ref_sym(2)).^2 ))  + ... 
+
+            f_symbolic = @(x_, u_) rocket.f(x_,u_);
+
+
+           cost = 5*sum(X_sym(1,:).^2)  + ... 
+               5*sum(X_sym(2,:).^2)  + ... 
+               5*sum(X_sym(3,:).^2)  + ... 
+               5*sum(X_sym(4,:).^2)  + ... 
+               5*sum(X_sym(5,:).^2)  + ... 
+               100*( sum( (X_sym(6,:)-ref_sym(4)).^2 ))  + ... 
+               1*sum(X_sym(7,:).^2)  + ... 
+               1*sum(X_sym(8,:).^2)  + ... 
+               1*sum(X_sym(9,:).^2)  + ... 
+               100*( sum( (X_sym(10,:)-ref_sym(1)).^2 ))  + ... 
+               100*( sum( (X_sym(11,:)-ref_sym(2)).^2 ))  + ... 
                200*( sum( (X_sym(12,:)-ref_sym(3)).^2 ))  + ... 
                0.05*U_sym(1,:)*U_sym(1,:)' + ... 
                0.05*U_sym(2,:)*U_sym(2,:)' + ...
-               1*U_sym(3,:)*U_sym(3,:)' + ...
-               0.01*U_sym(4,:)*U_sym(4,:)'+ ...
-               20*(X_sym(:,N)-target)'*Qf*(X_sym(:,N)-target);
-                    
+               0.005*U_sym(3,:)*U_sym(3,:)' + ...
+               0.005*U_sym(4,:)*U_sym(4,:)'+ ...
+               2*(X_sym(:,N)-target)'*Qf*(X_sym(:,N)-target);
+
             % Equality constraints (Casadi SX), each entry == 0
+            
+            eq_constr = [ (X_sym(:,1) - x0_sym) ];
 
             for k=1:N-1 % loop over control intervals
-            %opti.subject_to(X_sym(:,k+1) == f_discrete(X_sym(:,k), U_sym(:,k)));
             next_state = RK4(X_sym(:,k), U_sym(:,k), rocket.Ts, f_symbolic);
-            opti.subject_to((X_sym(:,k+1)) ==  next_state);
-            opti.subject_to(M*U_sym(:,k) <= m);
-            opti.subject_to(F*X_sym(:,k) <=  f);
-            %   
+            eq_constr = [eq_constr; ((X_sym(:,k+1)) -  next_state) ];
             end
-            eq_constr = [ ; ];
             
-            % Inequality constraints (Casadi SX), each entry <= 0
+            %% Inequality constraints (Casadi SX), each entry <= 0
 
-            % inequality constraints of the type: Gz < g
-            % with G = [F zeros; zeros M) and g = [f;m]
+              ineq_constr = [X_sym(4,:)-deg2rad(80),... %alpha<=80°
+                deg2rad(-80)-X_sym(4,:),... %alpha>=-80°
+                X_sym(5,:)-deg2rad(80),... %beta<=80°
+                deg2rad(-80)-X_sym(5,:),... %beta>=-80°
+                U_sym(2,:)-deg2rad(15),... %delta2<=15°
+                deg2rad(-15)-U_sym(2,:),... %delta2>=-15°
+                U_sym(1,:)-deg2rad(15),... %delta1<=15°
+                deg2rad(-15)-U_sym(1,:),... %delta1>=-15°
+                50-(U_sym(3,:)),... %Pavg>=50%
+                (U_sym(3,:))-80,... %Pavg<=50%
+                (-20)-U_sym(4,:),... %Pdiff>=-20%
+                U_sym(4,:)-20]'; %Pdiff<=20%         
+            
 
-            % F*x <= f constrain on states variables 
-            F = [0 0 0 1 0 0 0 0 0 0 0 0;... %alpha
-                0 0 0 -1 0 0 0 0 0 0 0 0;...
-                0 0 0 0 1 0 0 0 0 0 0 0;...   %beta
-                0 0 0 0 -1 0 0 0 0 0 0 0];
-                        
-            f = [deg2rad(85);deg2rad(85);deg2rad(85);deg2rad(85)];
-           
-            % M*u <= m constrians on inpute variables
-            M = [1 0 0 0;... % delta 1
-                 -1 0 0 0;...
-                 0 1 0 0;... % delat 2
-                 0 -1 0 0;...
-                 0 0 1 0;... % Pavg
-                 0 0 -1 0;...
-                 0 0 0 1;... % Pdiff
-                 0 0 0 -1];
-            m = [0.26;0.26;0.26;0.26;80;-50;20;20]; % do we need to do - something for Pavg
-            
-            DIA_left = zeros(size(M,1), size(F, 2));
-            DIA_right = zeros(size(F, 1), size(M, 2));
-            
-            G = [F DIA_right; DIA_left M];
-            g = [f; m];
-            
-            ineq_constr = [G ; g];
-
-            % For box constraints on state and input, overwrite entries of
-            % lbx, ubx, lbu, ubu defined above
+                %% For box constraints on state and input, is that necessary?
+        
+%                 lbx(4,:) = -80;
+%                 lbx(5,:) = -80;
+%                 ubx(4,:) = 80;
+%                 ubx(5,:) = 80;
+%                 
+%                 %Input is delta1, delta2, Pavg, Pdiff
+%                 lbu(1,:) = deg2rad(-15);
+%                 lbu(2,:) = deg2rad(-15);
+%                 lbu(3,:) = 50;
+%                 lbu(4,:) = -20;   
+%                 ubu(1,:) = deg2rad(15);
+%                 ubu(2,:) = deg2rad(15);
+%                 ubu(3,:) = 80;
+%                 ubu(4,:) = 20;
+            %%
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -230,4 +234,3 @@ classdef NmpcControl < handle
         end
     end
 end
-
