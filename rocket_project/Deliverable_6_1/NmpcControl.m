@@ -55,7 +55,7 @@ classdef NmpcControl < handle
             R = diag([10 10 20 10]); %inpute cost
             target = [0 0 0 0 0 ref_sym(4) 0 0 0 ref_sym(1) ref_sym(2) ref_sym(3)]'; %target (EPFL logo)
             [~,Qf,~] = dlqr(sys_d.A,sys_d.B,Q,R); %compute the infinte lqr horizon cost 
-            f_symbolic = @(x_, u_) rocket.f(x_,u_);
+
 
             %% Compute the cost
 
@@ -68,7 +68,7 @@ classdef NmpcControl < handle
             W6 = 0.01; % 0.0001 %0.005 %NW 0.05
             W7 = 2; %2 %NW 5
 
-            offset = 0;%56.667;
+            offset = 0; 
 
            cost = W1*sum(X_sym(1,:).^2)  + ... 
                W1*sum(X_sym(2,:).^2)  + ... 
@@ -121,10 +121,12 @@ classdef NmpcControl < handle
              %% Equality constraints (Casadi SX), each entry == 0
             
             eq_constr = (X_sym(:,1) - x0_sym);
-
+            
+            f_symbolic = @(x_, u_) rocket.f(x_,u_);
+           
             for k=1:N-1 % loop over control intervals
-            next_state = RK4(X_sym(:,k), U_sym(:,k), rocket.Ts, f_symbolic);
-            eq_constr = [ eq_constr; ((X_sym(:,k+1)) -  next_state) ];
+            next_state = RK4(X_sym(:,k), U_sym(:,k), rocket.Ts, f_symbolic); %compute the integral of f using RK4
+            eq_constr = [ eq_constr; ((X_sym(:,k+1)) -  next_state) ]; %update equality constrains 
             end
 
             %% 
