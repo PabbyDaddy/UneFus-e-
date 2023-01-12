@@ -1,4 +1,4 @@
-%% To Do 6.1
+ %% To Do 6.1
 clc
 clear
 close 
@@ -8,7 +8,7 @@ addpath(fullfile('..', 'src'));
 Ts = 1/20;
 rocket = Rocket(Ts);
 
-H = 1.0; %[s] Horizon length
+H = 2.0; %[s] Horizon length
 x0 = zeros(12,1);
 
 nmpc = NmpcControl(rocket,H);
