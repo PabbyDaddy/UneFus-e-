@@ -49,25 +49,16 @@ classdef MpcControl_x < MpcControlBase
                 dXp = mpc.A*dX + mpc.B*dU;
 
                 con = con + (X(:,i+1) == dXp+x_ref);
-<<<<<<< HEAD
 
                 con = con + (0.01 >= eU(:,i) >= 0);
                 con = con + (-eU(:,i) + -0.26 <= U(1,i) <= 0.26 + eU(:,i) );
                 
                 if( i > 1)
-                    con = con + (eX(:,i) >= 0);
+                    con = con + (0.02 >= eX(:,i) >= 0);
                     con = con + (-eX(:,i) + -0.1222 <= X(2,i) <= 0.1222 + eX(:,i) );
     
-                    obj = obj + dX'*Q*dX + eU(:,i)*2000 + eX(:,i)*2000 + dU'*R*dU;
+                    obj = obj + dX'*Q*dX + dU'*R*dU + eU(:,i)*2000 + eX(:,i)*2000;
                 end
-=======
-                con = con + (eX(:,i) >= 0);
-                con = con + (eU(:,i) >= 0);
-
-                con = con + (-eX(:,i) + -0.1222 <= X(2,i) <= 0.1222 + eX(:,i) );
-                con = con + (-eU(:,i) + -0.26 <= U(1,i) <= 0.26 + eU(:,i) );
-                obj = obj + dX'*Q*dX*5 + eU(:,i)*20000 + eX(:,i)*20000 + dU'*R*dU;
->>>>>>> origin/main
             end
 
             obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref);

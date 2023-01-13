@@ -51,10 +51,9 @@ classdef MpcControl_y < MpcControlBase
                 dXp = mpc.A*dX+mpc.B*dU;
 
                 con = con + (X(:,i+1) == dXp+x_ref);
-                con = con + (-eX(:,i) + -0.1222 <= X(2,i) <= 0.1222 + eX(:,i));
+
+                con = con + (eU(:,i) >= 0);
                 con = con + (-eU(:,i) + -0.26 <= U(1,i) <= 0.26 + eU(:,i));
-<<<<<<< HEAD
-                con = con + (0.01 >= eU(:,i) >= 0);
 
                 if( i > 1) % pas de conditions sur X quand == 1
                     con = con + (eX(:,i) >= 0);
@@ -62,14 +61,8 @@ classdef MpcControl_y < MpcControlBase
 
                     obj = obj + dX'*Q*dX + eX(:,i)*2000 + eU(:,i)*2000 + dU'*R*dU;
                 else
-                    obj = obj + eU(:,i)^2*20000 + dU'*R*dU;
+                    obj = obj + eU(:,i)*2000 + dU'*R*dU;
                 end
-=======
-                con = con + (eX(:,i) >= 0);
-                con = con + (eU(:,i) >= 0);
-                
-                obj = obj + dX'*Q*dX*0.5 + eX(:,i)^2*20000 + eU(:,i)^2*20000 + dU'*R*dU;
->>>>>>> origin/main
             end
 
             obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref);

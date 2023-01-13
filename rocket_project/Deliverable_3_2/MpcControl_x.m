@@ -36,7 +36,7 @@ classdef MpcControl_x < MpcControlBase
             %DEFINE THE SLACK VARIABLES 
             
 
-            Q = diag([1 1 1 300]);%maybe different coeff for different importance of each state
+            Q = diag([1 1 1 4]);%maybe different coeff for different importance of each state
             R = 0;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;

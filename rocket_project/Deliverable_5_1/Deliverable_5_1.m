@@ -17,7 +17,7 @@ u0 = [deg2rad([0 0]), 0, 0 ]';
 %Pdiff= [-20% +20%]
 
 Ts = 1/20; % Sample time
-Tf = 6; %simulation time
+Tf = 30; %simulation time
 
 rocket = Rocket(Ts);
 [xs, us] = rocket.trim();

@@ -33,7 +33,7 @@ classdef MpcControl_roll < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([1 3]); %just the angle gamma
+            Q = diag([1 4]); %just the angle gamma
             R = 0; %dont care Pdiff 
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;
@@ -48,7 +48,6 @@ classdef MpcControl_roll < MpcControlBase
 
                 con = con + (X(:,i+1) == dXp+x_ref);
                 con = con + (-20 <= U(:,i) <= +20); %contraints on PAvg - gravity offset
-                
 
                 if i>1
                     obj = obj + dX'*Q*dX;

@@ -65,10 +65,11 @@ classdef MpcControl_z < MpcControlBase
                 dXp = mpc.A*dX+mpc.B*dU;
 
                 con = con + (X(:,i+1) == dXp+x_ref);
+
                 con = con + (-eU(:,i) + (50-56.6) <= U(:,i) <= (80-56.7) + eU(:,i)); %contraints on PAvg - gravity offset
                 con = con + (eU(:,i) >= 0);
                 
-                obj = obj + (dX'*Q*dX) + eU(:,i)*20000;
+                obj = obj + (dX'*Q*dX) + eU(:,i)*2000;
             end
             obj = obj + ((X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref)); 
             
