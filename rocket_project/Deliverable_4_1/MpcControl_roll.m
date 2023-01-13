@@ -34,7 +34,7 @@ classdef MpcControl_roll < MpcControlBase
             %       the DISCRETE-TIME MODEL of your system
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
-            Q = diag([5 20]); %just the angle gamma
+            Q = diag([2 20]); %just the angle gamma
             R = 0; %dont care Pdiff 
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;

@@ -50,7 +50,7 @@ classdef MpcControl_z < MpcControlBase
             
             eU = sdpvar(1, N-1);
 
-            Q = diag([10 70]);%maybe different coeff for different importance of each state
+            Q = diag([30 70]);%maybe different coeff for different importance of each state
             R = 0.001;
 
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
