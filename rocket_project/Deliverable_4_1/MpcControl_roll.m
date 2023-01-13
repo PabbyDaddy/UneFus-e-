@@ -50,7 +50,6 @@ classdef MpcControl_roll < MpcControlBase
                 con = con + (X(:,i+1) == dXp+x_ref);
                 con = con + (-20 <= U(:,i) <= +20); %contraints on PAvg - gravity offset
                 
-
                 if i>1
                     obj = obj + dX'*Q*dX*5;
                 end

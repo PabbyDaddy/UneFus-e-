@@ -39,7 +39,7 @@ classdef MpcControl_x < MpcControlBase
             R = 0;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;
-            
+
             con = [];
             obj = 0;
 
@@ -49,12 +49,16 @@ classdef MpcControl_x < MpcControlBase
                 dXp = mpc.A*dX + mpc.B*dU;
 
                 con = con + (X(:,i+1) == dXp+x_ref);
-                con = con + (eX(:,i) >= 0);
-                con = con + (eU(:,i) >= 0);
 
-                con = con + (-eX(:,i) + -0.1222 <= X(2,i) <= 0.1222 + eX(:,i) );
+                con = con + (eU(:,i) >= 0);
                 con = con + (-eU(:,i) + -0.26 <= U(1,i) <= 0.26 + eU(:,i) );
-                obj = obj + dX'*Q*dX*5 + eU(:,i)*20000 + eX(:,i)*20000 + dU'*R*dU;
+                
+                if( i > 1)
+                    con = con + (eX(:,i) >= 0);
+                    con = con + (-eX(:,i) + -0.1222 <= X(2,i) <= 0.1222 + eX(:,i) );
+    
+                    obj = obj + dX'*Q*dX + eU(:,i)*20000 + eX(:,i)*20000 + dU'*R*dU;
+                end
             end
 
             obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref);
