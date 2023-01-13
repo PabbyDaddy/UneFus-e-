@@ -50,8 +50,8 @@ classdef MpcControl_z < MpcControlBase
             
             % SET THE PROBLEM CONSTRAINTS con AND THE OBJECTIVE obj HERE
 
-            Q = diag([2 4]);%maybe different coeff for different importance of each state
-            R = 0;
+            Q = diag([10 70]);%maybe different coeff for different importance of each state
+            R = 0.001;
             [K,Qf,~] = dlqr(mpc.A,mpc.B,Q,R);
             K = -K;            
 
@@ -65,9 +65,9 @@ classdef MpcControl_z < MpcControlBase
 
                 con = con + (X(:,i+1) == dXp + x_ref + mpc.B*d_est);  %get the offset there
                 con = con + (-eU(:,i) + (50-56.6) <= U(:,i) <= (80-56.7) + eU(:,i)); %contraints on PAvg - gravity offset
-                con = con + (1 >= eU(:,i) >= 0);
+                con = con + (eU(:,i) >= 0);
 
-                obj = obj + dX'*Q*dX + eU(:,i)^2*200;
+                obj = obj + (dX'*Q*dX) + eU(:,i)*20000;
             end
 
             obj = obj + (X(:,N)-x_ref)'*Qf*(X(:,N)-x_ref);
@@ -110,18 +110,17 @@ classdef MpcControl_z < MpcControlBase
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             % You can use the matrices mpc.A, mpc.B, mpc.C and mpc.D
             
-            obj = us'*us;
-            constraints = [];    
-            constraints = constraints + (1 >= eU >= 0);
-            constraints = constraints + (-eU + (50-56.6) <= us <= (80-56.7) + eU);
-            constraints = constraints + (xs == mpc.A*xs + mpc.B*us + mpc.B*d_est);
-            constraints = constraints + (ref == mpc.C*xs);
+            obj = us'*us; %put P_avg to 0
+            con = [];
+            con = con + (xs == mpc.A*xs+ mpc.B*us);
+            con = con + (mpc.C*xs == ref);
+            con = con + (50-56.66 <= us <= 80-56.66); % condition on pacg - gravity_offset given by us
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             
             % Compute the steady-state target
-            target_opti = optimizer(constraints, obj, sdpsettings('solver', 'gurobi'), {ref, d_est}, {xs, us});
+            target_opti = optimizer(con, obj, sdpsettings('solver', 'gurobi'), {ref, d_est}, {xs, us});
         end
         
         
@@ -136,19 +135,13 @@ classdef MpcControl_z < MpcControlBase
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             % You can use the matrices mpc.A, mpc.B, mpc.C and mpc.D
-            
-            nx   = size(mpc.A,1);
-            nu   = size(mpc.B,2);
-            ny   = size(mpc.C,1);
 
-            A_bar = [mpc.A, mpc.B;zeros(1,size(mpc.A,2)),1];
-            B_bar = [mpc.B;zeros(1,size(mpc.B,2))];
+            A_bar = [mpc.A, mpc.B;zeros(1,size(mpc.A,2)),1]; 
+            B_bar = [mpc.B;0];
             C_bar = [mpc.C,zeros(size(mpc.C,1),1)];
-            %  L : (A+LC)  
-            %       eig(A' + C'*L') = eig(A + L*C)
-            L = - place(A_bar',C_bar',[0.2, 0.25, 0.3])'; %eigen vector to define to converge < 1
-            %       A - B*K  ==> on recherche K qui est en fait le L 
-            %       A' - K'*B'
+
+            %L = - place(A_bar',C_bar',[0.05, 0.1, 0.15])'; %eigen vector to define to converge < 1
+            L = - place(A_bar',C_bar',[0.5, 0.6, 0.7])'; %moderate
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

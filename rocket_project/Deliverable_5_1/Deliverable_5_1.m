@@ -17,7 +17,7 @@ u0 = [deg2rad([0 0]), 0, 0 ]';
 %Pdiff= [-20% +20%]
 
 Ts = 1/20; % Sample time
-Tf = 30; %simulation time
+Tf = 6; %simulation time
 
 rocket = Rocket(Ts);
 [xs, us] = rocket.trim();
@@ -27,8 +27,6 @@ sys = rocket.linearize(xs, us);
 
 % Design MPC controller
 H = 8; % Horizon length in seconds
-
-
 
 mpc_x = MpcControl_x(sys_x, Ts, H);
 mpc_y = MpcControl_y(sys_y, Ts, H);
