@@ -15,7 +15,7 @@ nmpc = NmpcControl(rocket,H);
 
 ref = @(t_,x_) ref_EPFL(t_);
 Tf = 30;
-rocket.anim_rate = 10; %increase this to make animation faster
+rocket.anim_rate = 2; %increase this to make animation faster
 [T,X,U,Ref] =rocket.simulate(x0,Tf,@nmpc.get_u,ref);
 ph = rocket.plotvis(T, X,U,Ref);
 

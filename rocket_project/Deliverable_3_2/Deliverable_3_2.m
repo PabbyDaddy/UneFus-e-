@@ -28,7 +28,7 @@ sys = rocket.linearize(xs, us);
 % Design MPC controller
 H = 8; % Horizon length in seconds
 
-SelectedAxis = 2;
+SelectedAxis = 4;
 
 % Get controllers
 switch SelectedAxis

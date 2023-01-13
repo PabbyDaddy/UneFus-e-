@@ -24,7 +24,6 @@ classdef MpcControlBase
         
         % Compute the MPC controller
         function [u, T, X, U] = get_u(mpc, x, ref)
-            a=-1;
             % Compute the target ...
             if nargin >= 3
                 % ... from reference
@@ -51,7 +50,6 @@ classdef MpcControlBase
                 ref_x = zeros(size(mpc.A,1),1);
                 ref_u = 0;
             end
-            
             % Compute the control action
             if length(struct(mpc.ctrl_opti).diminOrig) == 4
                 if length(x) == 3
@@ -64,12 +62,10 @@ classdef MpcControlBase
             else
                 [sol, solve_status] = mpc.ctrl_opti({x, ref_x, ref_u});
             end
-            %display(ref_x);
             u = sol{1};
             if nargout >= 2, T = linspace(0, mpc.H, ceil(mpc.H/mpc.Ts) + 1); end
             if nargout >= 3, X = sol{2}; X(:,1) = x; end
             if nargout >= 4, U = sol{3}; end
-            
             if solve_status ~= 0
                 solve_status_str = yalmiperror(solve_status);
                 fprintf([' [' class(mpc) ' control: ' solve_status_str(1:end-1) '] ']);
