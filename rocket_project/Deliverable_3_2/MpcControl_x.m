@@ -50,9 +50,10 @@ classdef MpcControl_x < MpcControlBase
                 dXp = mpc.A*dX+mpc.B*dU;
 
                 con = con + (X(:,i+1) == dXp+x_ref);
-                con = con + ( -0.1222 <= X(2,i) <= 0.1222 );
                 con = con + ( -0.26 <= U(1,i) <= 0.26 );
+
                 if i>1
+                    con = con + ( -0.1222 <= X(2,i) <= 0.1222 );
                     obj = obj + dX'*Q*dX;
                 end
             end
