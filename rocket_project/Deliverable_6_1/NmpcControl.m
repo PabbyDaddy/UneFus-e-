@@ -46,85 +46,90 @@ classdef NmpcControl < handle
             
             opti = casadi.Opti(); % Optimization problem
             
-            offset = 55; %56.667;
-            
-            % Cost
-            %cost = 0;
-
-            % Variables
 
             %% Code section used to compute the terminal cost Qf using dlqr funtion 
-            [xs, us] = rocket.trim(); 
-            sys = rocket.linearize(xs, us);
+            [xs, us] = rocket.trim(); %steady state valus for x and u
+            sys = rocket.linearize(xs, us); %linearize the rocket around xs and us
             sys_d = c2d(sys,rocket.Ts);
-            Q = 200*eye(nx);
-            R = diag([10 10 20 10]); 
-            target = [0 0 0 0 0 ref_sym(4) 0 0 0 ref_sym(1) ref_sym(2) ref_sym(3)]';
-            [~,Qf,~] = dlqr(sys_d.A,sys_d.B,Q,R);
-
-            f_symbolic = @(x_, u_) rocket.f(x_,u_);
+            Q = 300*eye(nx); %state cost 
+            R = diag([10 10 20 10]); %inpute cost
+            target = [0 0 0 0 0 ref_sym(4) 0 0 0 ref_sym(1) ref_sym(2) ref_sym(3)]'; %target (EPFL logo)
+            [~,Qf,~] = dlqr(sys_d.A,sys_d.B,Q,R); %compute the infinte lqr horizon cost 
 
 
-           cost = 5*sum(X_sym(1,:).^2)  + ... 
-               5*sum(X_sym(2,:).^2)  + ... 
-               5*sum(X_sym(3,:).^2)  + ... 
-               5*sum(X_sym(4,:).^2)  + ... 
-               5*sum(X_sym(5,:).^2)  + ... 
-               100*( sum( (X_sym(6,:)-ref_sym(4)).^2 ))  + ... 
-               1*sum(X_sym(7,:).^2)  + ... 
-               1*sum(X_sym(8,:).^2)  + ... 
-               1*sum(X_sym(9,:).^2)  + ... 
-               100*( sum( (X_sym(10,:)-ref_sym(1)).^2 ))  + ... 
-               100*( sum( (X_sym(11,:)-ref_sym(2)).^2 ))  + ... 
-               200*( sum( (X_sym(12,:)-ref_sym(3)).^2 ))  + ... 
-               0.05*U_sym(1,:)*U_sym(1,:)' + ... 
-               0.05*U_sym(2,:)*U_sym(2,:)' + ...
-               0.005*U_sym(3,:)*U_sym(3,:)' + ...
-               0.005*U_sym(4,:)*U_sym(4,:)'+ ...
-               2*(X_sym(:,N)-target)'*Qf*(X_sym(:,N)-target);
+            %% Compute the cost
 
-            % Equality constraints (Casadi SX), each entry == 0
-            
-            eq_constr = [ (X_sym(:,1) - x0_sym) ];
+            %Tuning on the weights W1, W2, W3, W4, W5, W6, W7
+            W1 = 20; % 10 %5 %NW 10
+            W2 = 100; %50 % 100 %NW 50
+            W3 = 10; %1
+            W4 = 200; %100 %200 %NW 100
+            W5 = 0.1; % 0.01 %0.05 %NW 0.5
+            W6 = 0.01; % 0.0001 %0.005 %NW 0.05
+            W7 = 2; %2 %NW 5
 
-            for k=1:N-1 % loop over control intervals
-            next_state = RK4(X_sym(:,k), U_sym(:,k), rocket.Ts, f_symbolic);
-            eq_constr = [eq_constr; ((X_sym(:,k+1)) -  next_state) ];
-            end
-            
+            offset = 0; 
+
+           cost = W1*sum(X_sym(1,:).^2)  + ... 
+               W1*sum(X_sym(2,:).^2)  + ... 
+               W1*sum(X_sym(3,:).^2)  + ... 
+               W1*sum(X_sym(4,:).^2)  + ... 
+               W1*sum(X_sym(5,:).^2)  + ... 
+               W2*sum( (X_sym(6,:)-ref_sym(4)).^2 )  + ... 
+               W3*sum(X_sym(7,:).^2)  + ... 
+               W3*sum(X_sym(8,:).^2)  + ... 
+               W3*sum(X_sym(9,:).^2)  + ... 
+               W2*sum( (X_sym(10,:)-ref_sym(1)).^2 )  + ... 
+               W2*sum( (X_sym(11,:)-ref_sym(2)).^2 )  + ... 
+               W4*sum( (X_sym(12,:)-ref_sym(3)).^2 )  + ... 
+               W5*sum(U_sym(1,:).^2) + ... 
+               W5*sum(U_sym(2,:).^2) + ...
+               W6*sum((U_sym(3,:) - offset).^2) + ...
+               W6*sum(U_sym(4,:).^2)+ ...
+               W7*(X_sym(:,N)-target)'*Qf*(X_sym(:,N)-target);
+
+           
             %% Inequality constraints (Casadi SX), each entry <= 0
 
-              ineq_constr = [X_sym(4,:)-deg2rad(80),... %alpha<=80°
-                deg2rad(-80)-X_sym(4,:),... %alpha>=-80°
-                X_sym(5,:)-deg2rad(80),... %beta<=80°
-                deg2rad(-80)-X_sym(5,:),... %beta>=-80°
-                U_sym(2,:)-deg2rad(15),... %delta2<=15°
-                deg2rad(-15)-U_sym(2,:),... %delta2>=-15°
-                U_sym(1,:)-deg2rad(15),... %delta1<=15°
-                deg2rad(-15)-U_sym(1,:),... %delta1>=-15°
-                50-(U_sym(3,:)),... %Pavg>=50%
-                (U_sym(3,:))-80,... %Pavg<=50%
-                (-20)-U_sym(4,:),... %Pdiff>=-20%
-                U_sym(4,:)-20]'; %Pdiff<=20%         
-            
+               % F*x <= f constrain on states variables 
+            F = [0 0 0 1 0 0 0 0 0 0 0 0;... % alpha upper bound
+                0 0 0 -1 0 0 0 0 0 0 0 0;... % alpha lower bound
+                0 0 0 0 1 0 0 0 0 0 0 0;...   % beta upper bound
+                0 0 0 0 -1 0 0 0 0 0 0 0];   %beta lower bound
+                        
+            f = [ deg2rad(80) ; deg2rad(80) ; deg2rad(80) ; deg2rad(80) ];
+           
+            % M*u <= m constrians on inpute variables
+            M = [1 0 0 0;... % delta 1 upper bound
+                 -1 0 0 0;... % delta 1 lower bound
+                 0 1 0 0;... % delta 2 upper bound
+                 0 -1 0 0;...% delta 2 lower bound
+                 0 0 1 0;... % Pavg upper bound
+                 0 0 -1 0;...% Pavg lower bound
+                 0 0 0 1;... % Pdiff upper bound
+                 0 0 0 -1]; % Pdiff lower bound
 
-                %% For box constraints on state and input, is that necessary?
-        
-%                 lbx(4,:) = -80;
-%                 lbx(5,:) = -80;
-%                 ubx(4,:) = 80;
-%                 ubx(5,:) = 80;
-%                 
-%                 %Input is delta1, delta2, Pavg, Pdiff
-%                 lbu(1,:) = deg2rad(-15);
-%                 lbu(2,:) = deg2rad(-15);
-%                 lbu(3,:) = 50;
-%                 lbu(4,:) = -20;   
-%                 ubu(1,:) = deg2rad(15);
-%                 ubu(2,:) = deg2rad(15);
-%                 ubu(3,:) = 80;
-%                 ubu(4,:) = 20;
-            %%
+            m = [ deg2rad(15) ; deg2rad(15) ; deg2rad(15) ; deg2rad(15) ; 80; -50 ; 20 ; 20 ]; 
+
+            Gf = (F*X_sym - f);
+            Gu = (M*U_sym - m);
+
+            ineq_constr = [  Gf(1, 1:(end)), Gf(2, 1:(end)), Gf(3, 1:(end)), Gf(4, 1:(end)),...
+                 Gu(1, (1:end)), Gu(2, (1:end)), Gu(3, (1:end)), Gu(4, (1:end)), Gu(5, (1:end)),...
+                 Gu(6, (1:end)), Gu(7, (1:end)), Gu(8, (1:end))  ]';
+
+             %% Equality constraints (Casadi SX), each entry == 0
+            
+            eq_constr = (X_sym(:,1) - x0_sym);
+            
+            f_symbolic = @(x_, u_) rocket.f(x_,u_);
+           
+            for k=1:N-1 % loop over control intervals
+            next_state = RK4(X_sym(:,k), U_sym(:,k), rocket.Ts, f_symbolic); %compute the integral of f using RK4
+            eq_constr = [ eq_constr; ((X_sym(:,k+1)) -  next_state) ]; %update equality constrains 
+            end
+
+            %% 
             
             % YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE YOUR CODE HERE
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
